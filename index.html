@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluador de Cobros — Beemo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+.topbar{background:#185FA5;color:white;padding:12px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.topbar-logo{font-size:18px;font-weight:700;letter-spacing:-.5px}
+.topbar-sub{font-size:13px;opacity:.8}
+.container{max-width:780px;margin:0 auto;padding:24px 16px}
+.pbar{display:flex;gap:4px;margin-bottom:24px}
+.ps{height:4px;flex:1;border-radius:2px;background:#ddd;transition:background .3s}
+.ps.done{background:#185FA5}.ps.active{background:#378ADD}
+.step{display:none}.step.active{display:block}
+.card{background:white;border:1px solid #e8e8e6;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.sh{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0f0ee;display:flex;align-items:center;gap:8px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fr3{grid-template-columns:1fr 1fr 1fr}
+.fr1{grid-template-columns:1fr}
+label{display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:500}
+input,select,textarea{width:100%;font-size:14px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:white;color:#1a1a1a;outline:none;transition:border .15s;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+textarea{resize:vertical;line-height:1.5}
+.btn{padding:9px 22px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:1px solid #ddd;background:white;color:#1a1a1a;transition:all .15s;font-family:inherit}
+.btn:hover{background:#f5f5f3;border-color:#ccc}
+.btn.primary{background:#185FA5;color:white;border-color:#185FA5}
+.btn.primary:hover{background:#0C447C}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.brow{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.mc{border:2px solid #e8e8e6;border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;text-align:center}
+.mc:hover{border-color:#378ADD;background:#f0f7ff}
+.mc.sel{border-color:#185FA5;background:#f0f7ff}
+.mi{font-size:32px;margin-bottom:8px}
+.mt{font-size:15px;font-weight:600;color:#1a1a1a}
+.md{font-size:13px;color:#666;margin-top:4px;line-height:1.4}
+.five9-ref{background:#f0f7ff;border:1px solid #b5d4f4;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#185FA5;line-height:1.8}
+.uz{border:2px dashed #ddd;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;background:#fafaf8}
+.uz:hover,.uz.drag{border-color:#185FA5;background:#f0f7ff}
+.uz.done{border-color:#3B6D11;background:#f0f9e8;border-style:solid}
+.uz-icon{font-size:28px;margin-bottom:8px;color:#999}
+.uz-title{font-size:14px;font-weight:600;color:#1a1a1a}
+.uz-sub{font-size:12px;color:#888;margin-top:3px}
+.fmt-row{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.fmt{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.fc{background:#dceefa;color:#185FA5}
+.fp{background:#fde8cc;color:#854F0B}
+.ft{background:#d8f0c0;color:#3B6D11}
+.fok{margin-top:10px;font-size:13px;color:#3B6D11;font-weight:500}
+.aib{display:inline-flex;align-items:center;background:#dceefa;color:#185FA5;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+.sub{display:inline-flex;align-items:center;background:#fde8cc;color:#854F0B;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+.analyzing{text-align:center;padding:40px 20px}
+.spinner{width:40px;height:40px;border:3px solid #e8e8e6;border-top-color:#185FA5;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.asteps{margin-top:20px;display:flex;flex-direction:column;gap:8px;max-width:360px;margin-left:auto;margin-right:auto}
+.as{font-size:13px;color:#888;padding:8px 14px;border-radius:8px;background:#f5f5f3;text-align:left}
+.as.active{color:#185FA5;background:#f0f7ff;font-weight:500}
+.as.done{color:#3B6D11;background:#f0f9e8}
+.as.done::before{content:'✓ '}
+.ibn{background:#f5f5f3;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.ib-l{font-size:10px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.ib-v{font-size:13px;font-weight:600;color:#1a1a1a;margin-top:2px}
+.ci{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0ee}
+.ci:last-child{border-bottom:none}
+.cl{flex:1}
+.cn{font-size:13px;color:#1a1a1a;font-weight:500;line-height:1.4}
+.cm{font-size:11px;color:#888;margin-top:3px;display:flex;align-items:center;gap:6px}
+.cr{display:flex;gap:5px;flex-shrink:0;margin-top:2px}
+.badge{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all .15s;user-select:none}
+.badge.si{background:#f0f9e8;color:#3B6D11;border-color:#c0dd97}
+.badge.si.active{background:#639922;color:white;border-color:#3B6D11}
+.badge.no{background:#fef0f0;color:#A32D2D;border-color:#f7c1c1}
+.badge.no.active{background:#A32D2D;color:white;border-color:#791F1F}
+.badge.na{background:#f5f5f3;color:#888;border-color:#e0e0de}
+.badge.na.active{background:#888780;color:white;border-color:#5F5E5A}
+.wb{border-radius:8px;padding:14px 16px;margin-bottom:16px;display:none}
+.wb.show{display:block}
+.wb.red{background:#fef0f0;border:1.5px solid #f7c1c1}
+.wt{font-size:14px;font-weight:600;color:#A32D2D}
+.wd{font-size:13px;color:#A32D2D;margin-top:4px;opacity:.8}
+.mb{font-size:13px;color:#666;background:#f5f5f3;border-radius:8px;padding:10px 14px;margin-bottom:10px;line-height:1.5}
+.sd{text-align:center;padding:24px 16px}
+.sb{font-size:64px;font-weight:700;line-height:1}
+.sl{font-size:14px;color:#888;margin-top:6px}
+.rb{display:inline-block;padding:6px 20px;border-radius:20px;font-size:14px;font-weight:600;margin-top:12px}
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.ri{background:#f5f5f3;border-radius:8px;padding:12px 14px}
+.ril{font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.riv{font-size:18px;font-weight:700;margin-top:3px}
+.fbl{font-size:12px;font-weight:600;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.fb-text{font-size:13px;color:#444;line-height:1.6;white-space:pre-wrap}
+.ok-box{background:#f0f9e8;border:1px solid #c0dd97;border-radius:10px;padding:20px;text-align:center}
+.ok-t{font-size:16px;font-weight:600;color:#3B6D11}
+.ok-s{font-size:13px;color:#639922;margin-top:6px}
+.err-box{background:#fef0f0;border:1px solid #f7c1c1;border-radius:10px;padding:14px;font-size:13px;color:#A32D2D;margin-top:10px;display:none}
+.ai-warn{background:#fef7ec;border:1px solid #f5c58a;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#854F0B;display:none}
+.sep{height:1px;background:#f0f0ee;margin:14px 0}
+@media(max-width:600px){
+  .fr,.fr3{grid-template-columns:1fr}
+  .ibn{grid-template-columns:1fr 1fr}
+  .rg{grid-template-columns:1fr}
+  .mode-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <div class="topbar-logo">Beemo</div>
+    <div class="topbar-sub">Evaluador de Calidad — Cobros</div>
+  </div>
+</div>
+<div class="container">
+  <div class="pbar">
+    <div class="ps active" id="ps1"></div>
+    <div class="ps" id="ps2"></div>
+    <div class="ps" id="ps3"></div>
+    <div class="ps" id="ps4"></div>
+  </div>
+
+  <!-- PASO 1 -->
+  <div class="step active" id="step1">
+    <div class="card">
+      <div class="sh">¿Cómo se evalúa esta llamada?</div>
+      <div class="mode-grid">
+        <div class="mc" id="modeAI" onclick="selMode('ai')">
+          <div class="mi">🤖</div>
+          <div class="mt">Evaluación por IA</div>
+          <div class="md">Sube el archivo de TurboScribe. La IA evalúa automáticamente.</div>
+        </div>
+        <div class="mc" id="modeSup" onclick="selMode('supervisor')">
+          <div class="mi">👤</div>
+          <div class="mt">Evaluación por supervisor</div>
+          <div class="md">El supervisor escucha la llamada y llena los campos manualmente.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL IA -->
+    <div id="panelAI" style="display:none">
+      <div class="card">
+        <div class="sh">Datos de la llamada <span class="aib">IA evalúa automáticamente</span></div>
+        <div class="five9-ref">
+          <strong>📋 Campos del reporte Five9:</strong>&nbsp;
+          Asesor → <strong>AGENT NAME</strong> &nbsp;·&nbsp;
+          Cliente → <strong>CUSTOMER NAME</strong> &nbsp;·&nbsp;
+          Teléfono → <strong>DNIS</strong> &nbsp;·&nbsp;
+          ID Salesforce → <strong>salesforce_id</strong> &nbsp;·&nbsp;
+          Duración → <strong>CALL TIME</strong>
+        </div>
+        <div class="fr fr3">
+          <div><label>Fecha</label><input type="date" id="ai_fecha"></div>
+          <div><label>Asesor</label><input type="text" id="ai_asesor" placeholder="AGENT NAME"></div>
+          <div><label>Tipo de gestión</label>
+            <select id="tipoAI">
+              <option value="">Seleccionar...</option>
+              <option value="Suscripción">Suscripción (mora mensual)</option>
+              <option value="Cuotas-Graddual">Cuotas / Graddual</option>
+            </select>
+          </div>
+        </div>
+        <div class="fr">
+          <div><label>Nombre del cliente / estudiante</label><input type="text" id="ai_cliente" placeholder="CUSTOMER NAME"></div>
+          <div><label>Teléfono</label><input type="text" id="ai_tel" placeholder="DNIS"></div>
+        </div>
+        <div class="fr">
+          <div><label>ID Salesforce</label><input type="text" id="ai_sf" placeholder="salesforce_id"></div>
+          <div><label>Duración</label><input type="text" id="ai_dur" placeholder="CALL TIME"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sh">Transcripción de TurboScribe <span class="aib">CSV · TXT · PDF</span></div>
+        <div class="uz" id="uz" onclick="document.getElementById('fi').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
+          <div class="uz-icon">☁</div>
+          <div class="uz-title">Arrastra o haz clic para seleccionar</div>
+          <div class="uz-sub">Cualquier nombre de archivo — exporta directo de TurboScribe</div>
+          <div class="fmt-row">
+            <span class="fmt fc">CSV</span>
+            <span class="fmt fp">PDF</span>
+            <span class="fmt ft">TXT</span>
+          </div>
+          <div class="fok" id="fok"></div>
+        </div>
+        <input type="file" id="fi" accept=".csv,.txt,.pdf" style="display:none" onchange="handleFile(event)">
+      </div>
+      <div class="brow"><button class="btn primary" onclick="startAI()">Analizar con IA →</button></div>
+    </div>
+
+    <!-- PANEL SUPERVISOR -->
+    <div id="panelSup" style="display:none">
+      <div class="card">
+        <div class="sh">Datos de la llamada <span class="sub">Supervisor</span></div>
+        <div class="five9-ref">
+          <strong>📋 Campos del reporte Five9:</strong>&nbsp;
+          Asesor → <strong>AGENT NAME</strong> &nbsp;·&nbsp;
+          Cliente → <strong>CUSTOMER NAME</strong> &nbsp;·&nbsp;
+          Teléfono → <strong>DNIS</strong> &nbsp;·&nbsp;
+          ID Salesforce → <strong>salesforce_id</strong> &nbsp;·&nbsp;
+          Duración → <strong>CALL TIME</strong>
+        </div>
+        <div class="fr fr3">
+          <div><label>Fecha</label><input type="date" id="s_fecha"></div>
+          <div><label>Asesor</label><input type="text" id="s_asesor" placeholder="AGENT NAME"></div>
+          <div><label>Tipo de gestión</label>
+            <select id="s_tipo">
+              <option value="">Seleccionar...</option>
+              <option value="Suscripción">Suscripción</option>
+              <option value="Cuotas-Graddual">Cuotas / Graddual</option>
+            </select>
+          </div>
+        </div>
+        <div class="fr">
+          <div><label>Nombre del cliente</label><input type="text" id="s_cli" placeholder="CUSTOMER NAME"></div>
+          <div><label>Teléfono</label><input type="text" id="s_tel" placeholder="DNIS"></div>
+        </div>
+        <div class="fr">
+          <div><label>ID Salesforce</label><input type="text" id="s_sf" placeholder="salesforce_id"></div>
+          <div><label>Duración</label><input type="text" id="s_dur" placeholder="CALL TIME"></div>
+        </div>
+        <div class="fr1"><label>Link TurboScribe (referencia)</label><input type="text" id="s_lnk" placeholder="https://turboscribe.ai/..."></div>
+      </div>
+      <div class="brow"><button class="btn primary" onclick="startSup()">Iniciar evaluación →</button></div>
+    </div>
+  </div>
+
+  <!-- PASO 2 -->
+  <div class="step" id="step2">
+    <div class="card analyzing">
+      <div class="spinner"></div>
+      <p style="font-size:16px;font-weight:600;color:#1a1a1a">Analizando la llamada</p>
+      <p style="font-size:13px;color:#888;margin-top:6px">La IA evalúa cada criterio del diccionario de calidad Beemo</p>
+      <div class="asteps">
+        <div class="as done" id="as1">Leyendo archivo y extrayendo datos</div>
+        <div class="as active" id="as2">Evaluando 19 criterios de calidad</div>
+        <div class="as" id="as3">Detectando muletillas y warnings</div>
+        <div class="as" id="as4">Generando feedback para el asesor</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 3 -->
+  <div class="step" id="step3">
+    <div class="ai-warn" id="aiWarn">⚠ La IA no pudo analizar automáticamente. Revisa y ajusta los criterios manualmente.</div>
+    <div class="ibn" id="ibn3"></div>
+    <div class="wb red" id="cwarn">
+      <div class="wt">⚠ Warning: el asesor promovió cancelación del servicio</div>
+      <div class="wd" id="cwarnD"></div>
+    </div>
+    <div class="card"><div class="sh">1. Apertura de gestión — 5%</div><div id="sec-apertura"></div></div>
+    <div class="card"><div class="sh">2. Sondeo — 6%</div><div id="sec-sondeo"></div></div>
+    <div class="card"><div class="sh">3. Negociación — 20%</div><div id="sec-negociacion"></div></div>
+    <div class="card"><div class="sh">4. Adelanto de facturas — 15%</div><div id="sec-adelanto"></div></div>
+    <div class="card"><div class="sh">5. Persuasión — 20%</div><div id="sec-persuasion"></div></div>
+    <div class="card"><div class="sh">6. Cierres comerciales — 20%</div><div id="sec-cierre"></div></div>
+    <div class="card"><div class="sh">7. Conexión emocional — 6%</div><div id="sec-emocional"></div></div>
+    <div class="card"><div class="sh">8. Uso de herramientas — 8%</div><div id="sec-herramientas"></div></div>
+    <div class="card">
+      <div class="sh">Muletillas detectadas <span class="aib">observación — no afecta puntaje</span></div>
+      <div class="mb" id="mulTxt">—</div>
+      <label>Nota del evaluador</label>
+      <textarea id="mulObs" style="min-height:50px;margin-top:4px" placeholder="Observación adicional..."></textarea>
+    </div>
+    <div class="card">
+      <div class="sh">Feedback para el asesor <span id="fbBadge" class="aib">IA generó — puedes editar</span></div>
+      <div class="fr1" style="margin-bottom:14px"><label>Fortalezas de la llamada</label><textarea id="fort" style="min-height:80px;margin-top:4px"></textarea></div>
+      <div class="fr1" style="margin-bottom:14px"><label>Oportunidades de mejora (específicas y accionables)</label><textarea id="mej" style="min-height:100px;margin-top:4px"></textarea></div>
+      <div class="fr1" style="margin-bottom:14px"><label>Alertas y warnings</label><textarea id="alert" style="min-height:50px;margin-top:4px"></textarea></div>
+      <div class="fr1"><label>Observaciones adicionales</label><textarea id="obs" style="min-height:50px;margin-top:4px" placeholder="Cualquier nota extra..."></textarea></div>
+    </div>
+    <div class="brow">
+      <button class="btn" onclick="showStep(1)">← Volver</button>
+      <button class="btn primary" onclick="goStep4()">Ver resultado y guardar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 4 -->
+  <div class="step" id="step4">
+    <div class="card">
+      <div class="sd">
+        <div class="sb" id="scoreBig">—</div>
+        <div class="sl">Puntaje total de la llamada</div>
+        <div class="rb" id="resBadge">—</div>
+      </div>
+      <div class="rg" id="resGrid"></div>
+    </div>
+    <div class="card">
+      <div class="sh">Asesor evaluado</div>
+      <div class="ibn" id="ibn4" style="margin-bottom:0"></div>
+    </div>
+    <div class="card">
+      <div class="sh">Feedback para el asesor</div>
+      <div style="margin-bottom:16px"><div class="fbl">Fortalezas</div><div class="fb-text" id="r-fort"></div></div>
+      <div class="sep"></div>
+      <div style="margin:14px 0"><div class="fbl">Oportunidades de mejora</div><div class="fb-text" id="r-mej"></div></div>
+      <div id="r-alw" style="display:none"><div class="sep"></div><div style="margin-top:14px"><div class="fbl">Alertas</div><div class="fb-text" id="r-al" style="color:#A32D2D"></div></div></div>
+      <div class="sep"></div>
+      <div style="margin-top:14px"><div class="fbl">Muletillas</div><div class="fb-text" id="r-mul"></div></div>
+    </div>
+    <div class="card">
+      <div class="sh">Guardar en Google Sheets</div>
+      <div id="saveStatus" style="font-size:13px;color:#666;margin-bottom:12px">Listo para guardar esta evaluación.</div>
+      <div id="saveOK" style="display:none" class="ok-box">
+        <div class="ok-t">✓ Evaluación guardada correctamente</div>
+        <div class="ok-s" id="saveOKMsg"></div>
+      </div>
+      <div class="err-box" id="saveErr"></div>
+    </div>
+    <div class="brow">
+      <button class="btn" onclick="showStep(3)">← Ajustar</button>
+      <button class="btn primary" id="saveBtn" onclick="doSave()">Guardar en Sheets</button>
+      <button class="btn" onclick="reset()">Nueva evaluación</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzlO7FUuIeNqvTnqbImib3GrlUhTi-_yOTHiJhBinAayMlU1pjfbVQgutsbBwfcWf_kWg/exec';
+let mode='',parsedText='',aiData=null;
+let meta={telefono:'',idSF:'',asesor:'',fecha:'',cliente:'',tipo:'',duracion:'',link:''};
+let ev={};
+const CRIT={
+  apertura:[{id:'ap1',n:'Saludo correcto: inmediato, empático, presenta nombre y compañía',p:5}],
+  sondeo:[
+    {id:'so1',n:'Identifica motivo: menciona fecha y valor exacto de la factura en mora',p:3},
+    {id:'so2',n:'Sondeo: indaga motivo de no pago, identifica situación real del cliente',p:3}
+  ],
+  negociacion:[
+    {id:'ne1',n:'Intento de cobro real: actitud resolutiva, tono firme, sin descuento prematuro',p:7},
+    {id:'ne2',n:'Oferta de persuasión: resalta beneficios de Beemo antes de ofrecer descuento',p:7},
+    {id:'ne3',n:'Acuerdo futuro: si no cobra en 1er contacto, agenda fecha y hora específica',p:6}
+  ],
+  adelanto:[
+    {id:'ad1',n:'Ofrece adelanto de facturas: explica beneficios y valor de ahorro calculado',p:10},
+    {id:'ad2',n:'Oferta escalonada: ante rechazo anual, ofrece semestral o trimestral con valor',p:5}
+  ],
+  persuasion:[
+    {id:'pe1',n:'Objeciones iniciales: argumenta al menos una vez con beneficios del servicio',p:10},
+    {id:'pe2',n:'Objeciones finales: respuestas directas con beneficios antes de dar descuento',p:10}
+  ],
+  cierre:[
+    {id:'ci1',n:'Cierre cobro/mora: tono firme, instrucciones claras de pago, invita a acción inmediata',p:7},
+    {id:'ci2',n:'Cierre adelanto: cierre asumido con instrucciones claras de pago',p:7},
+    {id:'ci3',n:'Satisfacción y confirmación: verifica acuerdos, envía link de pago si aplica',p:6}
+  ],
+  emocional:[
+    {id:'em1',n:'Comunicación y empatía: usa nombre correcto, empatía genuina, tono adecuado',p:2},
+    {id:'em2',n:'Habilidad explicativa: explica con claridad sin generar confusión',p:2},
+    {id:'em3',n:'Manejo de la llamada: control de conversación, escucha activa, no interrumpe',p:2}
+  ],
+  herramientas:[
+    {id:'he1',n:'Uso de Salesforce: documenta, tipifica correctamente, revisa historial',p:3},
+    {id:'he2',n:'Uso de Five9: maneja el sistema correctamente, sin simular cortes',p:2},
+    {id:'he3',n:'Seguimiento: cumple acuerdos, tiempos de espera correctos, sin vacíos +20s',p:3}
+  ]
+};
+function setProg(s){for(let i=1;i<=4;i++){const e=document.getElementById('ps'+i);e.className='ps'+(i<s?' done':i===s?' active':'');}}
+function showStep(n){document.querySelectorAll('.step').forEach(x=>x.classList.remove('active'));document.getElementById('step'+n).classList.add('active');setProg(n);window.scrollTo({top:0,behavior:'smooth'});}
+function selMode(m){
+  mode=m;
+  document.getElementById('modeAI').classList.toggle('sel',m==='ai');
+  document.getElementById('modeSup').classList.toggle('sel',m==='supervisor');
+  document.getElementById('panelAI').style.display=m==='ai'?'block':'none';
+  document.getElementById('panelSup').style.display=m==='supervisor'?'block':'none';
+}
+function onDrag(e,on){e.preventDefault();document.getElementById('uz').classList.toggle('drag',on);}
+function onDrop(e){e.preventDefault();document.getElementById('uz').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)procFile(f);}
+function handleFile(e){const f=e.target.files[0];if(f)procFile(f);}
+function procFile(file){
+  const uz=document.getElementById('uz');
+  const fok=document.getElementById('fok');
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['csv','txt','pdf'].includes(ext)){alert('Usa CSV, TXT o PDF de TurboScribe');return;}
+  fok.textContent='Leyendo '+file.name+'...';
+  if(ext==='csv'){
+    const r=new FileReader();
+    r.onload=function(ev){
+      const lines=ev.target.result.split('\n').slice(1);
+      const txt=lines.map(line=>{
+        const matches=[];let inQ=false,cur='';
+        for(let ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){matches.push(cur.trim());cur='';}else{cur+=ch;}}
+        matches.push(cur.trim());
+        return(matches[2]||'').trim();
+      }).filter(t=>t&&t.length>1).join(' ');
+      parsedText=txt;
+      fok.textContent='✓ '+file.name+' — '+txt.split(' ').length+' palabras';
+      uz.classList.add('done');
+    };
+    r.readAsText(file,'UTF-8');
+  }else if(ext==='txt'){
+    const r=new FileReader();
+    r.onload=function(ev){parsedText=ev.target.result;fok.textContent='✓ '+file.name+' — '+parsedText.split(' ').length+' palabras';uz.classList.add('done');};
+    r.readAsText(file,'UTF-8');
+  }else{
+    fok.textContent='Procesando PDF...';
+    const r=new FileReader();
+    r.onload=async function(ev){
+      try{
+        const script=document.createElement('script');
+        script.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        document.head.appendChild(script);
+        await new Promise(res=>script.onload=res);
+        const lib=window['pdfjs-dist/build/pdf'];
+        lib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf=await lib.getDocument(new Uint8Array(ev.target.result)).promise;
+        let txt='';
+        for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();txt+=ct.items.map(s=>s.str).join(' ')+'\n';}
+        parsedText=txt;fok.textContent='✓ '+file.name+' listo';uz.classList.add('done');
+      }catch(e){fok.textContent='Error PDF. Intenta con CSV o TXT.';}
+    };
+    r.readAsArrayBuffer(file);
+  }
+}
+function animSteps(){
+  const ids=['as1','as2','as3','as4'];let i=0;
+  const iv=setInterval(()=>{
+    if(i>0)document.getElementById(ids[i-1]).className='as done';
+    if(i<ids.length){document.getElementById(ids[i]).className='as active';i++;}
+    else clearInterval(iv);
+  },950);
+}
+async function startAI(){
+  if(!document.getElementById('ai_asesor').value.trim()){alert('Ingresa el nombre del asesor');return;}
+  if(!document.getElementById('tipoAI').value){alert('Selecciona el tipo de gestión');return;}
+  if(!parsedText||parsedText.length<30){alert('Sube el archivo de transcripción de TurboScribe');return;}
+  meta.asesor=document.getElementById('ai_asesor').value.trim();
+  meta.fecha=document.getElementById('ai_fecha').value;
+  meta.telefono=document.getElementById('ai_tel').value;
+  meta.idSF=document.getElementById('ai_sf').value;
+  meta.cliente=document.getElementById('ai_cliente').value;
+  meta.tipo=document.getElementById('tipoAI').value;
+  meta.duracion=document.getElementById('ai_dur').value;
+  meta.link='';
+  showStep(2);
+  animSteps();
+  await runAI();
+}
+function startSup(){
+  if(!document.getElementById('s_asesor').value.trim()){alert('Ingresa el nombre del asesor');return;}
+  meta.asesor=document.getElementById('s_asesor').value.trim();
+  meta.fecha=document.getElementById('s_fecha').value;
+  meta.telefono=document.getElementById('s_tel').value;
+  meta.idSF=document.getElementById('s_sf').value;
+  meta.cliente=document.getElementById('s_cli').value;
+  meta.tipo=document.getElementById('s_tipo').value;
+  meta.duracion=document.getElementById('s_dur').value;
+  meta.link=document.getElementById('s_lnk').value;
+  document.getElementById('fbBadge').className='sub';
+  document.getElementById('fbBadge').textContent='Supervisor — completa el feedback';
+  renderCrits(false);showStep(3);
+}
+function runAI(){
+  return new Promise(function(resolve){
+    const cbName='beemoAI_'+Date.now();
+    window[cbName]=function(d){
+      const el=document.getElementById('beemoAIScript');
+      if(el)el.remove();
+      delete window[cbName];
+      if(d&&d.success&&d.analysis){
+        aiData=d.analysis;
+        if(aiData.cliente_nombre)meta.cliente=aiData.cliente_nombre;
+      }else{
+        console.error('AI error:',d?d.error:'sin respuesta');
+        aiData=null;
+      }
+      renderCrits(true);
+      showStep(3);
+      resolve();
+    };
+    setTimeout(function(){
+      if(window[cbName]){
+        delete window[cbName];
+        const el=document.getElementById('beemoAIScript');if(el)el.remove();
+        aiData=null;renderCrits(true);showStep(3);resolve();
+      }
+    },45000);
+    const s=document.createElement('script');
+    s.id='beemoAIScript';
+    s.src=SCRIPT_URL+'?action=analyze&tipo='+encodeURIComponent(meta.tipo)+'&transcripcion='+encodeURIComponent(parsedText.substring(0,7000))+'&callback='+cbName;
+    document.head.appendChild(s);
+  });
+}
+function buildBanner(id){
+  document.getElementById(id).innerHTML=`
+    <div><div class="ib-l">Asesor</div><div class="ib-v">${meta.asesor||'—'}</div></div>
+    <div><div class="ib-l">Cliente</div><div class="ib-v">${meta.cliente||'—'}</div></div>
+    <div><div class="ib-l">Tel · ID SF</div><div class="ib-v">${meta.telefono||'—'} · ${meta.idSF||'—'}</div></div>
+    <div><div class="ib-l">Fecha · Tipo</div><div class="ib-v">${meta.fecha||'—'} · ${meta.tipo||'—'}</div></div>`;
+}
+function renderCrits(withAI){
+  buildBanner('ibn3');
+  if(withAI&&!aiData){document.getElementById('aiWarn').style.display='block';}
+  Object.entries(CRIT).forEach(([sec,items])=>{
+    const cont=document.getElementById('sec-'+sec);cont.innerHTML='';
+    items.forEach(item=>{
+      const v=withAI&&aiData?(aiData[item.id]||'NA'):'NA';
+      ev[item.id]=v;
+      const d=document.createElement('div');d.className='ci';
+      const ab=withAI&&aiData?`<span class="aib" style="font-size:10px">IA: ${v}</span>`:'';
+      d.innerHTML=`
+        <div class="cl"><div class="cn">${item.n}</div><div class="cm">Peso: ${item.p}% ${ab}</div></div>
+        <div class="cr">
+          <span class="badge si ${v==='SI'?'active':''}" onclick="sel('${item.id}','SI',this)">Sí</span>
+          <span class="badge no ${v==='NO'?'active':''}" onclick="sel('${item.id}','NO',this)">No</span>
+          <span class="badge na ${v==='NA'?'active':''}" onclick="sel('${item.id}','NA',this)">N/A</span>
+        </div>`;
+      cont.appendChild(d);
+    });
+  });
+  if(withAI&&aiData){
+    if(aiData.promueve_cancelacion){document.getElementById('cwarn').classList.add('show');document.getElementById('cwarnD').textContent=aiData.cancelacion_evidencia||'El asesor promovió la baja del servicio.';}
+    const mul=aiData.muletillas;
+    document.getElementById('mulTxt').textContent=mul&&mul.length>0?mul.join(', '):'No se detectaron muletillas repetitivas significativas.';
+    document.getElementById('fort').value=aiData.fortalezas||'';
+    document.getElementById('mej').value=aiData.mejoras||'';
+    document.getElementById('alert').value=aiData.alertas||'';
+  }
+}
+function sel(id,val,el){el.parentElement.querySelectorAll('.badge').forEach(b=>b.classList.remove('active'));el.classList.add('active');ev[id]=val;}
+function calcScore(){
+  let e=0,m=0;
+  Object.values(CRIT).flat().forEach(c=>{if(ev[c.id]!=='NA'){m+=c.p;}if(ev[c.id]==='SI'){e+=c.p;}});
+  return m>0?Math.round((e/m)*100):0;
+}
+function getRes(s){
+  if(s>=80)return{label:'Aprobado',bg:'#f0f9e8',color:'#3B6D11'};
+  if(s>=60)return{label:'En riesgo',bg:'#fef7ec',color:'#854F0B'};
+  return{label:'Crítico',bg:'#fef0f0',color:'#A32D2D'};
+}
+function goStep4(){
+  const score=calcScore();const res=getRes(score);
+  document.getElementById('scoreBig').textContent=score+'%';
+  document.getElementById('scoreBig').style.color=res.color;
+  const rb=document.getElementById('resBadge');
+  rb.textContent=res.label;rb.style.background=res.bg;rb.style.color=res.color;
+  const grid=document.getElementById('resGrid');grid.innerHTML='';
+  [{label:'Apertura',ids:['ap1']},{label:'Sondeo',ids:['so1','so2']},
+   {label:'Negociación',ids:['ne1','ne2','ne3']},{label:'Adelanto',ids:['ad1','ad2']},
+   {label:'Persuasión',ids:['pe1','pe2']},{label:'Cierre',ids:['ci1','ci2','ci3']},
+   {label:'Emocional',ids:['em1','em2','em3']},{label:'Herramientas',ids:['he1','he2','he3']}
+  ].forEach(g=>{
+    let e=0,m=0;
+    g.ids.forEach(id=>{const c=Object.values(CRIT).flat().find(x=>x.id===id);if(c&&ev[id]!=='NA'){m+=c.p;}if(c&&ev[id]==='SI'){e+=c.p;}});
+    const pct=m>0?Math.round((e/m)*100):0;
+    const col=pct>=80?'#3B6D11':pct>=60?'#854F0B':'#A32D2D';
+    const div=document.createElement('div');div.className='ri';
+    div.innerHTML=`<div class="ril">${g.label}</div><div class="riv" style="color:${col}">${pct}%</div>`;
+    grid.appendChild(div);
+  });
+  buildBanner('ibn4');
+  document.getElementById('r-fort').textContent=document.getElementById('fort').value||'—';
+  document.getElementById('r-mej').textContent=document.getElementById('mej').value||'—';
+  const al=document.getElementById('alert').value;
+  if(al){document.getElementById('r-alw').style.display='block';document.getElementById('r-al').textContent=al;}
+  document.getElementById('r-mul').textContent=document.getElementById('mulTxt').textContent;
+  showStep(4);
+}
+function doSave(){
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  document.getElementById('saveStatus').textContent='Enviando a Google Sheets...';
+  document.getElementById('saveErr').style.display='none';
+  const score=calcScore();const res=getRes(score);
+  const payload={
+    fecha:meta.fecha,asesor:meta.asesor,cliente:meta.cliente,
+    telefono:meta.telefono,idSF:meta.idSF,tipo:meta.tipo,
+    duracion:meta.duracion||'',link:meta.link||'',
+    modo:mode==='ai'?'IA':'Supervisor',
+    criterios:Object.values(CRIT).flat().map(c=>ev[c.id]||'NA'),
+    score:score+'%',resultado:res.label,
+    cancelacion:(aiData&&aiData.promueve_cancelacion)?'SÍ - WARNING':'No',
+    muletillas:document.getElementById('mulTxt').textContent,
+    fortalezas:document.getElementById('fort').value,
+    mejoras:document.getElementById('mej').value,
+    alertas:document.getElementById('alert').value,
+    observaciones:document.getElementById('obs').value
+  };
+  const jsonStr=JSON.stringify(payload);
+  const b64=btoa(unescape(encodeURIComponent(jsonStr)));
+  const url=SCRIPT_URL+'?action=save&b64='+encodeURIComponent(b64);
+  const cbName='beemoCallback_'+Date.now();
+  window[cbName]=function(d){
+    const el=document.getElementById('beemoScript');if(el)el.remove();delete window[cbName];
+    if(d&&d.success){
+      document.getElementById('saveStatus').style.display='none';
+      document.getElementById('saveOK').style.display='block';
+      document.getElementById('saveOKMsg').textContent='Fila '+d.row+' guardada — '+meta.asesor+' · '+score+'%';
+      btn.textContent='Guardado ✓';
+    }else{
+      document.getElementById('saveErr').style.display='block';
+      document.getElementById('saveErr').textContent='Error al guardar: '+(d?d.error:'Sin respuesta');
+      btn.disabled=false;btn.textContent='Reintentar';
+    }
+  };
+  setTimeout(function(){
+    if(window[cbName]){
+      delete window[cbName];
+      document.getElementById('saveErr').style.display='block';
+      document.getElementById('saveErr').textContent='Tiempo de espera agotado. Intenta de nuevo.';
+      btn.disabled=false;btn.textContent='Reintentar';
+    }
+  },15000);
+  const s=document.createElement('script');s.id='beemoScript';
+  s.src=url+'&callback='+cbName;document.head.appendChild(s);
+}
+function reset(){
+  mode='';parsedText='';aiData=null;ev={};
+  meta={telefono:'',idSF:'',asesor:'',fecha:'',cliente:'',tipo:'',duracion:'',link:''};
+  ['modeAI','modeSup'].forEach(id=>document.getElementById(id).classList.remove('sel'));
+  ['panelAI','panelSup'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('uz').classList.remove('done');
+  document.getElementById('fok').textContent='';
+  document.getElementById('fi').value='';
+  document.getElementById('tipoAI').value='';
+  ['ai_asesor','ai_fecha','ai_tel','ai_sf','ai_cliente','ai_dur'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('cwarn').classList.remove('show');
+  document.getElementById('aiWarn').style.display='none';
+  document.getElementById('saveOK').style.display='none';
+  document.getElementById('saveErr').style.display='none';
+  document.getElementById('saveStatus').style.display='block';
+  document.getElementById('saveStatus').textContent='Listo para guardar esta evaluación.';
+  const sb=document.getElementById('saveBtn');sb.disabled=false;sb.textContent='Guardar en Sheets';
+  showStep(1);
+}
+</script>
+</body>
+</html>
